@@ -55,6 +55,30 @@ async function run() {
         })
 
 
+        app.get('/category/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { category_id: id };
+            const category_post = await sellPostCollection.find(query).toArray();
+            res.send(category_post)
+
+        });
+
+
+        app.get('/sellpost', async (req, res) => {
+            const query = {};
+            const result = await sellPostCollection.find(query).toArray();
+            res.send(result)
+        })
+
+
+        app.get('/sellpost/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const sellpost = await sellPostCollection.findOne(query);
+            res.send(sellpost);
+        })
+
+
 
         app.post('/users', async (req, res) => {
             const user = req.body;
@@ -94,7 +118,7 @@ run().catch(console.log)
 app.get('/', async (req, res) => {
     res.send('server is running')
 })
-app.listen(port, () => console.log(`server running on ${port}`))
+app.listen(port, () => console.log(`server running on ${port}`));
 
 
 
