@@ -71,6 +71,19 @@ async function run() {
         })
 
 
+        app.get('/sellposts', async (req, res) => {
+            const email = req.query.email;
+            const decodedEmail = req.decoded.email;
+
+            if (email !== decodedEmail) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+            const query = { email: email };
+            const posts = await sellPostCollection.find(query).toArray();
+            res.send(posts)
+        })
+
+
         app.get('/sellpost/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
