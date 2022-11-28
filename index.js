@@ -45,6 +45,8 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 const usersCollection = client.db('garage').collection('users');
 const categoryCollection = client.db('garage').collection('category');
 const sellPostCollection = client.db('garage').collection('sellpost');
+const bookingsCollection = client.db('garage').collection('bookings');
+
 
 async function run() {
     try {
@@ -171,6 +173,54 @@ async function run() {
         app.post('/sellpost', async (req, res) => {
             const sellpost = req.body;
             const result = await sellPostCollection.insertOne(sellpost);
+            res.send(result);
+        })
+        app.post('/bookings', async (req, res) => {
+            const booking = req.body;
+            console.log(booking);
+            const query = {
+                productName: booking.productName,
+                price: booking.price,
+                name: booking.name,
+                email: booking.email,
+                location: booking.location,
+                phone: booking.phone
+
+            }
+
+            const alreadyBooked = await bookingsCollection.find(query).toArray();
+
+            if (alreadyBooked.length) {
+                const message = `You already have a booking on ${booking.name}`
+                return res.send({ acknowledged: false, message })
+            }
+
+            const result = await bookingsCollection.insertOne(booking);
+            res.send(result)
+        })
+
+        app.get('/bookings', async (req, res) => {
+            const query = {};
+            const bookings = await bookingsCollection.find(query).toArray();
+            res.send(bookings);
+        });
+
+        app.get('/bookings', async (req, res) => {
+            const email = req.query.email;
+            const decodedEmail = req.decoded.email;
+
+            if (email !== decodedEmail) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+            const query = { email: email };
+            const bookings = await bookingsCollection.find(query).toArray();
+            res.send(bookings)
+        })
+
+        app.delete('/bookings/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await bookingsCollection.deleteOne(filter);
             res.send(result);
         })
     }
