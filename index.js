@@ -3,7 +3,7 @@ const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 
@@ -23,7 +23,7 @@ function verifyJWT(req, res, next) {
 
     const token = authHeader.split(' ')[1];
 
-    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
         if (err) {
             return res.status(403).send({ message: 'forbidden access' })
         }
@@ -48,6 +48,18 @@ const sellPostCollection = client.db('garage').collection('sellpost');
 
 async function run() {
     try {
+
+        const verifySeller = async (req, res, next) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'seller') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
         app.get('/category', async (req, res) => {
             const query = {};
             const result = await categoryCollection.find(query).toArray();
@@ -71,7 +83,7 @@ async function run() {
         })
 
 
-        app.get('/sellposts', async (req, res) => {
+        app.get('/sellposts', verifyJWT, verifySeller, async (req, res) => {
             const email = req.query.email;
             const decodedEmail = req.decoded.email;
 
@@ -101,6 +113,17 @@ async function run() {
 
         app.get('/users', async (req, res) => {
             const query = {};
+            const users = await usersCollection.find(query).toArray();
+            res.send(users);
+        });
+
+        app.get('/users/seller', async (req, res) => {
+            const query = { role: "seller" };
+            const users = await usersCollection.find(query).toArray();
+            res.send(users);
+        });
+        app.get('/users/buyer', async (req, res) => {
+            const query = { role: "buyer" };
             const users = await usersCollection.find(query).toArray();
             res.send(users);
         });
@@ -138,7 +161,7 @@ async function run() {
             const query = { email: email };
             const user = await usersCollection.findOne(query);
             if (user) {
-                const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '24h' })
+                const token = jwt.sign({ email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '24h' })
                 return res.send({ accessToken: token });
             }
             res.status(403).send({ accessToken: '' })
